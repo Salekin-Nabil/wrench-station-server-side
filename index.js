@@ -29,6 +29,20 @@ async function run() {
             const product = await productCollection.findOne(query);
             res.send(product);
         });
+        //Update Quantity PUT API
+        app.put('/products/:id', async(req, res)=>{
+            const id = req.params.id;
+            const updateProduct = req.body;
+            const query = {_id: ObjectId(id)};
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    quantity: updateProduct.quantity
+                }
+            };
+            const result = await productCollection.updateOne(query, updatedDoc, options);
+            res.send(result);
+        });
     }
     finally{
 
