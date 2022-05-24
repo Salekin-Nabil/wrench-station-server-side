@@ -18,9 +18,16 @@ async function run() {
 
         //Products GET API 6 Items
         app.get('/products_6', async (req, res)=>{
-            const cursor = productCollection.find({}).limit(6);
+            const cursor = productCollection.find({}).sort({_id:-1}).limit(6);
             const products = await cursor.toArray();
             res.send(products);
+        });
+        //Single Product GET API
+        app.get('/products/:id', async(req, res)=>{
+            const id = req.params.id;
+            const query = {_id: ObjectId(id)};
+            const product = await productCollection.findOne(query);
+            res.send(product);
         });
     }
     finally{
