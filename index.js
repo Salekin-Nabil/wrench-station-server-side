@@ -2,11 +2,29 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+function verifyJWT(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send({ message: 'Unauthorized access' });
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).send({ message: 'Forbidden access'});
+        }
+        console.log('decoded', decoded);
+        req.decoded = decoded;
+        next();
+    })
+
+}
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.0dn1k.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
@@ -16,7 +34,17 @@ async function run() {
         await client.connect();
         const productCollection = client.db('wrench-station').collection('product');
         const orderCollection = client.db('wrench-station').collection('order');
+        const userCollection = client.db('wrench-station').collection('user');
 
+
+        //JWT
+        app.post('/login', async (req, res) => {
+            const user = req.body;
+            const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+                expiresIn: '1d'
+            });
+            res.send({ accessToken });
+        })
         //Products GET API 6 Items
         app.get('/products_6', async (req, res)=>{
             const cursor = productCollection.find({}).sort({_id:-1}).limit(6);
@@ -31,7 +59,7 @@ async function run() {
             res.send(product);
         });
         //Orders POST API
-        app.post('/order', async (req, res)=>{
+        app.post('/orders', async (req, res)=>{
             const newOrder = req.body;
             const order = await orderCollection.insertOne(newOrder);
             res.send(order);
@@ -50,6 +78,19 @@ async function run() {
             const result = await productCollection.updateOne(query, updatedDoc, options);
             res.send(result);
         });
+        //Store users PUT API
+        app.put('/user/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = req.body;
+            const filter = { email: email };
+            const options = { upsert: true };
+            const updateDoc = {
+              $set: user,
+            };
+            const result = await userCollection.updateOne(filter, updateDoc, options);
+            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+            res.send({ result, token });
+          });
     }
     finally{
 
