@@ -15,6 +15,7 @@ async function run() {
     try{
         await client.connect();
         const productCollection = client.db('wrench-station').collection('product');
+        const orderCollection = client.db('wrench-station').collection('order');
 
         //Products GET API 6 Items
         app.get('/products_6', async (req, res)=>{
@@ -28,6 +29,12 @@ async function run() {
             const query = {_id: ObjectId(id)};
             const product = await productCollection.findOne(query);
             res.send(product);
+        });
+        //Orders POST API
+        app.post('/order', async (req, res)=>{
+            const newOrder = req.body;
+            const order = await orderCollection.insertOne(newOrder);
+            res.send(order);
         });
         //Update Quantity PUT API
         app.put('/products/:id', async(req, res)=>{
