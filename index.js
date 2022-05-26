@@ -50,6 +50,7 @@ async function run() {
         const productCollection = client.db('wrench-station').collection('product');
         const orderCollection = client.db('wrench-station').collection('order');
         const userCollection = client.db('wrench-station').collection('user');
+        const reviewCollection = client.db('wrench-station').collection('review');
 
 
         //JWT
@@ -60,11 +61,17 @@ async function run() {
             });
             res.send({ accessToken });
         })
-        //Products GET API 6 Items
+        //Products GET API latest 6 Items
         app.get('/products_6', async (req, res)=>{
             const cursor = productCollection.find({}).sort({_id:-1}).limit(6);
             const products = await cursor.toArray();
             res.send(products);
+        });
+        //Reviews GET API latest 6 reviews
+        app.get('/reviews_6', async (req, res)=>{
+            const cursor = reviewCollection.find({}).sort({_id:-1}).limit(6);
+            const reviews = await cursor.toArray();
+            res.send(reviews);
         });
         //Single Product GET API
         app.get('/products/:id', async(req, res)=>{
@@ -93,6 +100,24 @@ async function run() {
             const order = await orderCollection.insertOne(newOrder);
             res.send(order);
         });
+        //Reviews POST API
+        // app.post('/reviews', async (req, res)=>{
+        //     const newReview = req.body;
+        //     const order = await orderCollection.insertOne(newOrder);
+        //     res.send(order);
+        // });
+        //Reviews PUT API
+        app.put('/reviews/:email', async (req, res) => {
+            const email = req.params.email;
+            const newReview = req.body;
+            const filter = { email: email };
+            const options = { upsert: true };
+            const updateDoc = {
+              $set: newReview,
+            };
+            const result = await reviewCollection.updateOne(filter, updateDoc, options);
+            res.send({ result });
+          });
         //Update Quantity PUT API
         app.put('/products/:id', async(req, res)=>{
             const id = req.params.id;
@@ -117,7 +142,7 @@ async function run() {
               $set: user,
             };
             const result = await userCollection.updateOne(filter, updateDoc, options);
-            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d' })
             res.send({ result, token });
           });
     }
