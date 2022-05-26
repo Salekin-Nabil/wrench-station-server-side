@@ -73,6 +73,21 @@ async function run() {
             const reviews = await cursor.toArray();
             res.send(reviews);
         });
+        //Single user info GET API
+        app.get('/user/:email', verifyJWT, async (req, res)=>{
+            const decodedEmail = req.decoded.email;
+            const email = req.params.email;
+            if (email === decodedEmail)
+            {
+                const query = {email: email};
+                const cursor = userCollection.find(query);
+                const user = await cursor.toArray();
+                res.send(user);
+            }
+            else{
+                res.status(403).send({message: 'forbidden access'})
+            }
+        });
         //Single Product GET API
         app.get('/products/:id', async(req, res)=>{
             const id = req.params.id;
@@ -132,6 +147,18 @@ async function run() {
             const result = await productCollection.updateOne(query, updatedDoc, options);
             res.send(result);
         });
+        //Update user info PUT API
+        app.put('/userUpdate/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = req.body;
+            const filter = { email: email };
+            const options = { upsert: true };
+            const updateDoc = {
+              $set: user,
+            };
+            const result = await userCollection.updateOne(filter, updateDoc, options);
+            res.send({ result });
+          });
         //Store users PUT API
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
@@ -142,7 +169,7 @@ async function run() {
               $set: user,
             };
             const result = await userCollection.updateOne(filter, updateDoc, options);
-            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d' })
+            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d' });
             res.send({ result, token });
           });
     }
