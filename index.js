@@ -9,23 +9,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// function verifyJWT(req, res, next) {
-//     const authHeader = req.headers.authorization;
-//     if (!authHeader) {
-//         return res.status(401).send({ message: 'Unauthorized access' });
-//     }
-//     const token = authHeader.split(' ')[1];
-//     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-//         if (err) {
-//             return res.status(403).send({ message: 'Forbidden access'});
-//         }
-//         console.log('decoded', decoded);
-//         req.decoded = decoded;
-//         next();
-//     })
-
-// }
-
 function verifyJWT(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -51,6 +34,17 @@ async function run() {
         const orderCollection = client.db('wrench-station').collection('order');
         const userCollection = client.db('wrench-station').collection('user');
         const reviewCollection = client.db('wrench-station').collection('review');
+
+        const verifyAdmin = async (req, res, next) => {
+            const requester = req.decoded.email;
+            const requesterAccount = await userCollection.findOne({ email: requester });
+            if (requesterAccount.admin === true) {
+              next();
+            }
+            else {
+              res.status(403).send({ message: 'forbidden' });
+            }
+          }
 
 
         //JWT
@@ -125,18 +119,19 @@ async function run() {
                 res.status(403).send({message: 'forbidden access'})
             }
         })
+        //Check admin GET API
+        app.get('/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = await userCollection.findOne({ email: email });
+            const isAdmin = user.admin;
+            res.send({ admin: isAdmin })
+          })
         //Orders POST API
         app.post('/orders', async (req, res)=>{
             const newOrder = req.body;
             const order = await orderCollection.insertOne(newOrder);
             res.send(order);
         });
-        //Reviews POST API
-        // app.post('/reviews', async (req, res)=>{
-        //     const newReview = req.body;
-        //     const order = await orderCollection.insertOne(newOrder);
-        //     res.send(order);
-        // });
         //Reviews PUT API
         app.put('/reviews/:email', async (req, res) => {
             const email = req.params.email;
@@ -175,13 +170,12 @@ async function run() {
             const result = await userCollection.updateOne(filter, updateDoc, options);
             res.send({ result });
           });
-        //Update user info PUT API
-        app.put('/userAdmin/:email', async (req, res) => {
+        //Make admin PUT API
+        app.put('/userAdmin/:email', verifyJWT, verifyAdmin, async (req, res) => {
             const email = req.params.email;
             const user = req.body;
             const filter = { email: email };
             const options = { upsert: true };
-            console.log(user);
             const updateDoc = {
               $set: {admin: user.admin},
             };
