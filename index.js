@@ -88,6 +88,22 @@ async function run() {
                 res.status(403).send({message: 'forbidden access'})
             }
         });
+        //All user info GET API
+        app.get('/userAll/:email', verifyJWT, async (req, res)=>{
+            const decodedEmail = req.decoded.email;
+            const email = req.params.email;
+            if (email === decodedEmail)
+            {
+                const query = {};
+                const cursor = userCollection.find(query);
+                const user = await cursor.toArray();
+                res.send(user);
+            }
+            else{
+                res.status(403).send({message: 'forbidden access'})
+            }
+        });
+
         //Single Product GET API
         app.get('/products/:id', async(req, res)=>{
             const id = req.params.id;
@@ -155,6 +171,19 @@ async function run() {
             const options = { upsert: true };
             const updateDoc = {
               $set: user,
+            };
+            const result = await userCollection.updateOne(filter, updateDoc, options);
+            res.send({ result });
+          });
+        //Update user info PUT API
+        app.put('/userAdmin/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = req.body;
+            const filter = { email: email };
+            const options = { upsert: true };
+            console.log(user);
+            const updateDoc = {
+              $set: {admin: user.admin},
             };
             const result = await userCollection.updateOne(filter, updateDoc, options);
             res.send({ result });
