@@ -124,7 +124,7 @@ async function run() {
             const email = req.params.email;
             const user = await userCollection.findOne({ email: email });
             const isAdmin = user.admin;
-            res.send({ admin: isAdmin })
+            res.send({ admin: isAdmin });
           })
         //Orders POST API
         app.post('/orders', async (req, res)=>{
