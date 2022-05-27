@@ -4,11 +4,13 @@ require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Verifying User
 function verifyJWT(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -34,7 +36,8 @@ async function run() {
         const orderCollection = client.db('wrench-station').collection('order');
         const userCollection = client.db('wrench-station').collection('user');
         const reviewCollection = client.db('wrench-station').collection('review');
-
+        const paymentCollection = client.db('wrench-station').collection('payments');
+        //Verifying Admin
         const verifyAdmin = async (req, res, next) => {
             const requester = req.decoded.email;
             const requesterAccount = await userCollection.findOne({ email: requester });
@@ -44,7 +47,20 @@ async function run() {
             else {
               res.status(403).send({ message: 'forbidden' });
             }
-          }
+          };
+
+        //Payment POST API
+        app.post('/create-payment-intent', verifyJWT, async(req, res) =>{
+          const order = req.body;
+          const bill = order.bill;
+          const amount = bill*100;
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount : amount,
+            currency: 'usd',
+            payment_method_types:['card']
+          });
+          res.send({clientSecret: paymentIntent.client_secret})
+        });
 
 
         //JWT
@@ -234,6 +250,21 @@ async function run() {
             const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d' });
             res.send({ result, token });
           });
+        //Payment confirmation PATH API
+        app.patch('/orders/:id', verifyJWT, async(req, res) =>{
+          const id  = req.params.id;
+          const payment = req.body;
+          const filter = {_id: ObjectId(id)};
+          const updatedDoc = {
+            $set: {
+              status: "pending",
+              transactionId: payment.transactionId
+            }
+          }
+          const result = await paymentCollection.insertOne(payment);
+          const updatedOrder = await orderCollection.updateOne(filter, updatedDoc);
+          res.send(updatedOrder);
+        });
         //Products DELETE API
         app.delete('/products/:id', async (req, res)=>{
             const id = req.params.id;
