@@ -54,7 +54,13 @@ async function run() {
                 expiresIn: '1d'
             });
             res.send({ accessToken });
-        })
+        });
+        //Products GET API All Items
+        app.get('/products', async (req, res)=>{
+            const cursor = productCollection.find({});
+            const products = await cursor.toArray();
+            res.send(products);
+        });
         //Products GET API latest 6 Items
         app.get('/products_6', async (req, res)=>{
             const cursor = productCollection.find({}).sort({_id:-1}).limit(6);
@@ -195,6 +201,13 @@ async function run() {
             const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d' });
             res.send({ result, token });
           });
+        //Products DELETE API
+        app.delete('/products/:id', async (req, res)=>{
+            const id = req.params.id;
+            const query = {_id: ObjectId(id)};
+            const products = await productCollection.deleteOne(query);
+            res.send(products);
+        })
     }
     finally{
 
