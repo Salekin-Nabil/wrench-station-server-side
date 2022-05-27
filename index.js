@@ -61,6 +61,12 @@ async function run() {
             const products = await cursor.toArray();
             res.send(products);
         });
+        //Products GET API All orders
+        app.get('/orders', async (req, res)=>{
+            const cursor = orderCollection.find({});
+            const orders = await cursor.toArray();
+            res.send(orders);
+        });
         //Products GET API latest 6 Items
         app.get('/products_6', async (req, res)=>{
             const cursor = productCollection.find({}).sort({_id:-1}).limit(6);
@@ -132,6 +138,12 @@ async function run() {
             const isAdmin = user.admin;
             res.send({ admin: isAdmin });
           })
+        //Products POST API
+        app.post('/products', async (req, res)=>{
+            const newProduct = req.body;
+            const product = await productCollection.insertOne(newProduct);
+            res.send(product);
+        });
         //Orders POST API
         app.post('/orders', async (req, res)=>{
             const newOrder = req.body;
@@ -188,6 +200,20 @@ async function run() {
             const result = await userCollection.updateOne(filter, updateDoc, options);
             res.send({ result });
           });
+        //UPdate Order Status PUT API
+        app.put('/orders/:id', verifyJWT, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const updateStatus = req.body;
+            const query = {_id: ObjectId(id)};
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    status: updateStatus.status
+                }
+            };
+            const result = await orderCollection.updateOne(query, updatedDoc, options);
+            res.send(result);
+          });
         //Store users PUT API
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
@@ -207,6 +233,13 @@ async function run() {
             const query = {_id: ObjectId(id)};
             const products = await productCollection.deleteOne(query);
             res.send(products);
+        })
+        //Orders DELETE API
+        app.delete('/orders/:id', async (req, res)=>{
+            const id = req.params.id;
+            const query = {_id: ObjectId(id)};
+            const orders = await orderCollection.deleteOne(query);
+            res.send(orders);
         })
     }
     finally{
