@@ -130,14 +130,21 @@ async function run() {
             else{
                 res.status(403).send({message: 'forbidden access'})
             }
-        })
+        });
+        //Single order GET API
+        app.get('/orders/:id', verifyJWT, async(req, res) =>{
+          const id = req.params.id;
+          const query = {_id: ObjectId(id)};
+          const order = await orderCollection.findOne(query);
+          res.send(order);
+        });
         //Check admin GET API
         app.get('/admin/:email', async (req, res) => {
             const email = req.params.email;
             const user = await userCollection.findOne({ email: email });
             const isAdmin = user.admin;
             res.send({ admin: isAdmin });
-          })
+          });
         //Products POST API
         app.post('/products', async (req, res)=>{
             const newProduct = req.body;
